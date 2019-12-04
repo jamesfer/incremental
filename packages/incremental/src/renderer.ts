@@ -1,10 +1,5 @@
 import { ComputedValue, Reference } from './free';
-import {
-  anyReferencesOverlap,
-  assertNever,
-  assertType,
-  Dictionary,
-} from './utils';
+import { anyReferencesOverlap, assertNever, assertType, Dictionary } from './utils';
 
 export interface InternalProps {
   key?: string;
@@ -83,56 +78,47 @@ function removeNode(node: Node) {
   }
 }
 
-function insertNode(insertionPoint: InsertionPoint, node: Node, replacing?: Node) {
-  const kind = insertionPoint.kind;
-  if (replacing === node) {
-    // The new node is the same as the old so we're going to move the old one to the correct place
-    switch (kind) {
-      case 'child':
-        if (replacing.parentNode !== insertionPoint.node) {
-          insertionPoint.node.appendChild(replacing);
-        }
-        break;
+function moveNode(insertionPoint: InsertionPoint, replacing: Node) {
+  switch (insertionPoint.kind) {
+    case 'child':
+      if (replacing.parentNode !== insertionPoint.node) {
+        insertionPoint.node.appendChild(replacing);
+      }
+      break;
 
-      case 'after':
-        if (replacing.previousSibling !== insertionPoint.node) {
-          // There isn't a way to insert something after a node so we have to do this
-          if (insertionPoint.node.nextSibling) {
-            insertionPoint.node.nextSibling.before(replacing);
-          } else if (insertionPoint.node.parentNode) {
-            insertionPoint.node.parentNode.appendChild(replacing);
-          }
-        }
-        break;
-
-      default:
-        assertNever(kind);
-    }
-  } else {
-    switch (kind) {
-      case 'child':
-        insertionPoint.node.appendChild(node);
-        break;
-
-      case 'after':
+    case 'after':
+      if (replacing.previousSibling !== insertionPoint.node) {
         // There isn't a way to insert something after a node so we have to do this
         if (insertionPoint.node.nextSibling) {
-          insertionPoint.node.nextSibling.before(node);
+          insertionPoint.node.nextSibling.before(replacing);
         } else if (insertionPoint.node.parentNode) {
-          insertionPoint.node.parentNode.appendChild(node);
+          insertionPoint.node.parentNode.appendChild(replacing);
         }
-        break;
-
-      default:
-        assertNever(kind);
-    }
-
-    if (replacing && node !== replacing) {
-      const parent = replacing.parentNode;
-      if (parent) {
-        parent.removeChild(replacing);
       }
-    }
+      break;
+
+    default:
+      assertNever(insertionPoint);
+  }
+}
+
+function insertNode(insertionPoint: InsertionPoint, node: Node) {
+  switch (insertionPoint.kind) {
+    case 'child':
+      insertionPoint.node.appendChild(node);
+      break;
+
+    case 'after':
+      // There isn't a way to insert something after a node so we have to do this
+      if (insertionPoint.node.nextSibling) {
+        insertionPoint.node.nextSibling.before(node);
+      } else if (insertionPoint.node.parentNode) {
+        insertionPoint.node.parentNode.appendChild(node);
+      }
+      break;
+
+    default:
+      assertNever(insertionPoint);
   }
 }
 
@@ -366,7 +352,14 @@ function renderElementNode(
   });
 
   // Insert the new tag if required
-  insertNode(insertionPoint, tag, previousTag);
+  if (previousTag === tag) {
+    moveNode(insertionPoint, tag);
+  } else {
+    insertNode(insertionPoint, tag);
+    if (previousTag) {
+      removeNode(previousTag);
+    }
+  }
   return [afterInsertionPoint(tag), { previousChildren: results, previousTag: tag }];
 }
 
