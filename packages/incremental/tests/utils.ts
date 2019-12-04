@@ -1,4 +1,4 @@
-import { App, ElementNode } from '../src';
+import { App, ComputedValue, ElementNode } from '../src';
 
 export function render(node: ElementNode): App {
   const app = new App(document.body, node);
@@ -30,4 +30,15 @@ export function summariseChildren(element: ChildNode): SummarisedChild[] {
 
 export function node(tag: string, children: SummarisedChild | SummarisedChild[] = []): SummarisedChild {
   return { tag, children: Array.isArray(children) ? children : [children] };
+}
+
+export function computed(paths: (string | string[])[], value: () => any): ComputedValue<any> {
+  return {
+    value,
+    references: paths.map(path => ({ path: Array.isArray(path) ? path : [path] })),
+  }
+}
+
+export function defer(): Promise<void> {
+  return new Promise(r => setTimeout(r, 0));
 }

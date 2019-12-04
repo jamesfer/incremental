@@ -1,13 +1,20 @@
-import { Dictionary, InternalProps } from './create-element';
 import { ComputedValue, Reference } from './free';
-import { anyReferencesOverlap, assertNever } from './utils';
+import {
+  anyReferencesOverlap,
+  assertNever,
+  assertType,
+  Dictionary,
+} from './utils';
+
+export interface InternalProps {
+  key?: string;
+}
 
 export type FunctionComponent<P extends Dictionary<any> = any> = (props: P & InternalProps) => ReturnType<typeof createElement>;
 
 const elementNodeKind = 'elementNode';
 // These can be children args to createElement
 export interface ElementNode {
-  // write(): HTMLElement;
   kind: any;
   tag: string | FunctionComponent<any>;
   props?: { [k: string]: Attribute } | null | undefined;
@@ -17,6 +24,20 @@ export type TextChild = string | number | boolean | null | undefined | object;
 export type ComputedChild = ComputedValue<any>;
 export type ArrayChild = ElementNode[];
 export type Child = TextChild | ComputedChild | ArrayChild | ElementNode;
+
+export interface ElementNodeState {
+  previousChildren: NodeState[];
+  previousTag: HTMLElement | undefined;
+}
+export interface ComputedNodeState {
+  previousChildren: Child;
+  previousState: NodeState;
+}
+export interface ArrayNodeState {
+  keyedChildren: Dictionary<NodeState>
+}
+export type TextNodeState = Text | undefined;
+export type NodeState = TextNodeState | ComputedNodeState | ArrayNodeState | ElementNodeState;
 
 export type StaticAttribute = string | number | boolean | null | undefined;
 export type ComputedAttribute = ComputedValue<any>;
@@ -115,6 +136,60 @@ function insertNode(insertionPoint: InsertionPoint, node: Node, replacing?: Node
   }
 }
 
+function removePreviousState(state: NodeState) {
+  if (!state) {
+    return;
+  }
+
+  if (isTextNodeState(state)) {
+    state.remove();
+  } else if (isElementNodeState(state)) {
+    if (state.previousTag) {
+      state.previousTag.remove();
+    }
+  } else if (isComputedNodeState(state)) {
+    removePreviousState(state.previousState);
+  } else {
+    Object.values(state.keyedChildren).forEach(removePreviousState);
+  }
+}
+
+function isComputedNodeState(state: Exclude<NodeState, undefined>): state is ComputedNodeState {
+  if ('previousState' in state) {
+    // Confirm that the state is correctly narrowed
+    assertType<ComputedNodeState>(state);
+    return true;
+  }
+  return false;
+}
+
+function isElementNodeState(state: Exclude<NodeState, undefined>): state is ElementNodeState {
+  if ('previousTag' in state) {
+    // Confirm that the state is correctly narrowed
+    assertType<ElementNodeState>(state);
+    return true;
+  }
+  return false;
+}
+
+function isArrayNodeState(state: Exclude<NodeState, undefined>): state is ArrayNodeState {
+  if ('keyedChildren' in state) {
+    // Confirm that the state is correctly narrowed
+    assertType<ArrayNodeState>(state);
+    return true;
+  }
+  return false;
+}
+
+function isTextNodeState(state: Exclude<NodeState, undefined>): state is Exclude<TextNodeState, undefined> {
+  if ('nodeName' in state) {
+    // Confirm that the state is correctly narrowed
+    assertType<TextNodeState>(state);
+    return true;
+  }
+  return false;
+}
+
 function textChildValue(child: TextChild): string | undefined {
   if (child == null || child === false || child === true || child === '') {
     return undefined;
@@ -123,30 +198,28 @@ function textChildValue(child: TextChild): string | undefined {
   return child.toString();
 }
 
-function produceTextChild(
+function renderTextChild(
   insertionPoint: InsertionPoint,
   child: TextChild,
   invalidated: Reference<any>[],
-  previousChild: Text | undefined,
+  previousState: NodeState | undefined,
   cacheState: CacheState,
-): [InsertionPoint, Text | undefined] {
-  if (previousChild) {
+): [InsertionPoint, TextNodeState | undefined] {
+  if (previousState && isTextNodeState(previousState)) {
     if (cacheState === CacheState.Valid) {
-      return [insertionPoint, previousChild];
+      return [insertionPoint, previousState];
     }
 
-    if (cacheState === CacheState.Invalid) {
+    if (cacheState === CacheState.Invalid && previousState instanceof Text) {
       const value = textChildValue(child);
-      if (previousChild instanceof Text) {
-        if (typeof value === 'string') {
-          if (previousChild.textContent !== value) {
-            previousChild.textContent = value;
-          }
-          insertNode(insertionPoint, previousChild);
-          return [afterInsertionPoint(previousChild), previousChild];
-        } else {
-          removeNode(previousChild);
+      if (typeof value === 'string') {
+        if (previousState.textContent !== value) {
+          previousState.textContent = value;
         }
+        insertNode(insertionPoint, previousState);
+        return [afterInsertionPoint(previousState), previousState];
+      } else {
+        removeNode(previousState);
       }
     }
   }
@@ -155,6 +228,9 @@ function produceTextChild(
   if (typeof value === 'string') {
     const node = document.createTextNode(value);
     insertNode(insertionPoint, node);
+    if (previousState) {
+      removePreviousState(previousState);
+    }
     return [afterInsertionPoint(node), node];
   }
   return [insertionPoint, undefined];
@@ -164,25 +240,30 @@ function renderComputedChild(
   insertionPoint: InsertionPoint,
   child: ComputedChild,
   invalidated: Reference<any>[],
-  state: { previousChildren: Child, previousElement: any } | undefined,
+  state: NodeState | undefined,
   cacheState: CacheState,
-): [InsertionPoint, { previousChildren: Child, previousElement: any }] {
-  const { previousChildren, previousElement } = state || {};
+): [InsertionPoint, ComputedNodeState] {
+  let previousChildren: Child = {};
+  let previousState: NodeState | undefined = undefined;
+  if (state && isComputedNodeState(state)) {
+    ({ previousChildren, previousState } = state);
+  }
+
   if (cacheState === CacheState.Empty || anyReferencesOverlap(child.references, invalidated)) {
     const value: Child = child.value();
-    const [nextInsertionPoint, element] = render(insertionPoint, value, invalidated, previousElement, cacheState === CacheState.Empty ? CacheState.Empty : CacheState.Invalid);
+    const [nextInsertionPoint, state] = render(insertionPoint, value, invalidated, previousState, cacheState === CacheState.Empty ? CacheState.Empty : CacheState.Invalid);
     return [nextInsertionPoint, {
       previousChildren: value,
-      previousElement: element,
+      previousState: state,
     }];
   }
 
   // Even when the computed value hasn't changed, we still need to walk the old children to check
   // if they changed
-  const [newInsertionPoint, element] = render(insertionPoint, previousChildren, invalidated, previousElement, cacheState);
+  const [newInsertionPoint, element] = render(insertionPoint, previousChildren, invalidated, previousState, cacheState);
   return [newInsertionPoint, {
     previousChildren,
-    previousElement: element,
+    previousState: element,
   }];
 }
 
@@ -257,14 +338,18 @@ function renderElementNode(
   insertionPoint: InsertionPoint,
   child: ElementNode,
   invalidated: Reference<any>[],
-  state: { previousChildren: any[], previousTag: HTMLElement | undefined } | undefined,
+  previousState: NodeState | undefined,
   cacheState: CacheState,
-): [InsertionPoint, { previousChildren: any[], previousTag: HTMLElement | undefined }] {
+): [InsertionPoint, ElementNodeState] {
   if (typeof child.tag !== 'string') {
-    return renderElementNode(insertionPoint, child.tag(child.props as any), invalidated, state, cacheState);
+    return renderElementNode(insertionPoint, child.tag(child.props as any), invalidated, previousState, cacheState);
   }
 
-  const { previousChildren = [], previousTag } = state || {};
+  let previousChildren: NodeState[] = [];
+  let previousTag: HTMLElement | undefined = undefined;
+  if (previousState && isElementNodeState(previousState)) {
+    ({ previousChildren, previousTag } = previousState);
+  }
 
   // Create this element
   const tag = produceElementTag(child.tag, invalidated, previousTag, cacheState);
@@ -289,11 +374,16 @@ function renderArrayChild(
   insertionPoint: InsertionPoint,
   children: ArrayChild,
   invalidated: Reference<any>[],
-  previousChildren: Dictionary<any> | undefined,
+  previousState: NodeState | undefined,
   cacheState: CacheState,
-): [InsertionPoint, Dictionary<any>] {
-  const newChildren: Dictionary<any> = {};
+): [InsertionPoint, ArrayNodeState] {
+  const newChildren: Dictionary<NodeState> = {};
   let nextInsertionPoint = insertionPoint;
+
+  let previousChildren: Dictionary<NodeState> = {};
+  if (previousState && isArrayNodeState(previousState)) {
+    previousChildren = previousState.keyedChildren;
+  }
 
   children.forEach((child) => {
     const key = child.props ? child.props.key : null;
@@ -309,30 +399,30 @@ function renderArrayChild(
       throw new Error('Boolean values cannot be used as keys');
     }
 
-    const previousChild = previousChildren ? previousChildren[key] : undefined;
+    const previousChild = previousChildren[key];
     ([nextInsertionPoint, newChildren[key]] = render(nextInsertionPoint, child, invalidated, previousChild, cacheState));
   });
 
-  return [nextInsertionPoint, newChildren];
+  return [nextInsertionPoint, { keyedChildren: newChildren }];
 }
 
-function render(insertionPoint: InsertionPoint, child: Child, invalidated: Reference<any>[], previousChild: any, cacheState: CacheState): [InsertionPoint, any] {
+function render(insertionPoint: InsertionPoint, child: Child, invalidated: Reference<any>[], previousState: NodeState, cacheState: CacheState): [InsertionPoint, NodeState] {
   if (isComputedValue(child)) {
-    return renderComputedChild(insertionPoint, child, invalidated, previousChild, cacheState);
+    return renderComputedChild(insertionPoint, child, invalidated, previousState, cacheState);
   }
 
   if (Array.isArray(child)) {
-    return renderArrayChild(insertionPoint, child, invalidated, previousChild, cacheState);
+    return renderArrayChild(insertionPoint, child, invalidated, previousState, cacheState);
   }
 
   if (isElementNode(child)) {
-    return renderElementNode(insertionPoint, child, invalidated, previousChild, cacheState);
+    return renderElementNode(insertionPoint, child, invalidated, previousState, cacheState);
   }
 
-  return produceTextChild(insertionPoint, child, invalidated, previousChild, cacheState);
+  return renderTextChild(insertionPoint, child, invalidated, previousState, cacheState);
 }
 
-export function renderRootNode(container: HTMLElement, child: ElementNode, invalidated: Reference<any>[], previousChild?: any): any {
+export function renderRootNode(container: HTMLElement, child: ElementNode, invalidated: Reference<any>[], previousChild?: ElementNodeState | undefined): ElementNodeState {
   const [, element] = renderElementNode(
     childInsertionPoint(container),
     child,

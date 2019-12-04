@@ -1,5 +1,13 @@
 import { Reference } from './free';
 
+export interface Dictionary<T> {
+  [k: string]: T;
+}
+
+export interface NumericDictionary<T> {
+  [k: number]: T;
+}
+
 export function referencesOverlap<S>(dependent: Reference<S>, dirtyReference: Reference<S>): boolean {
   const length = Math.min(dependent.path.length, dirtyReference.path.length);
   for (let i = 0; i < length; i++) {
@@ -32,3 +40,5 @@ export function getPath<S>(value: S, keys: string[]): any {
 export function assertNever(x: never): never {
   throw new Error('assertNever: This function should never be called');
 }
+
+export function assertType<T>(value: T): void {}
