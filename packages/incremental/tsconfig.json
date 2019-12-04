@@ -1,0 +1,35 @@
+{
+  "compilerOptions": {
+    "target": "es5",
+    "module": "es6",
+    "lib": [
+      "dom",
+      "es2018"
+    ],
+    "jsx": "react",
+    "jsxFactory": "createElement",
+    "sourceMap": true,
+    "importHelpers": true,
+    "declaration": true,
+    "declarationMap": true,
+    "outDir": "build",
+    // "downlevelIteration": true,            
+    "strict": true,
+    "moduleResolution": "node",
+    "allowSyntheticDefaultImports": true,  
+    "esModuleInterop": true,
+    "types": [
+      "node",
+      "jest",
+      "incremental-intrinsics"
+    ]
+  },
+  "files": [
+    "src/index.ts"
+  ],
+  "include": [
+    "src/**/*.ts",
+    "tests/**/*.ts",
+    "tests/**/*.tsx"
+  ]
+}

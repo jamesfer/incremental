@@ -1,0 +1,247 @@
+<html>
+<head>
+  <title>Incremental vs React Benchmarks</title>
+  <meta charset="utf8" />
+  <style>
+    body {
+      padding: 0;
+      margin: 0;
+      display: flex;
+      height: 100%;
+    }
+    .sidebar {
+      padding: 20px;
+      width: 400px;
+      overflow-y: scroll;
+      border-right: 1px solid #eee;
+    }
+    #testbed {
+      flex: 1;
+      padding: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="sidebar">
+    <table>
+      <tr>
+        <th></th>
+        <th>Incremental</th>
+        <th>React</th>
+      </tr>
+      <tr>
+        <th scope="row"><strong>First render</strong></th>
+        <td>
+          <button id="incremental-first-render" class="benchmark">Start</button>
+        </td>
+        <td>
+          <button id="react-first-render" class="benchmark">Start</button>
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">~10 nodes</th>
+        <td>
+          <button id="incremental-first-render-3-2" class="benchmark">Start</button>
+        </td>
+        <td>
+          <button id="react-first-render-3-2" class="benchmark">Start</button>
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">~30 nodes</th>
+        <td>
+          <button id="incremental-first-render-3-3" class="benchmark">Start</button>
+        </td>
+        <td>
+          <button id="react-first-render-3-3" class="benchmark">Start</button>
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">~100 nodes</th>
+        <td>
+          <button id="incremental-first-render-10-2" class="benchmark">Start</button>
+        </td>
+        <td>
+          <button id="react-first-render-10-2" class="benchmark">Start</button>
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">~256 nodes</th>
+        <td>
+          <button id="incremental-first-render-4-4" class="benchmark">Start</button>
+        </td>
+        <td>
+          <button id="react-first-render-4-4" class="benchmark">Start</button>
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">~1000 nodes</th>
+        <td>
+          <button id="incremental-first-render-10-3" class="benchmark">Start</button>
+        </td>
+        <td>
+          <button id="react-first-render-10-3" class="benchmark">Start</button>
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">~4000 nodes</th>
+        <td>
+          <button id="incremental-first-render-8-4" class="benchmark">Start</button>
+        </td>
+        <td>
+          <button id="react-first-render-8-4" class="benchmark">Start</button>
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">~10000 nodes</th>
+        <td>
+          <button id="incremental-first-render-10-4" class="benchmark">Start</button>
+        </td>
+        <td>
+          <button id="react-first-render-10-4" class="benchmark">Start</button>
+        </td>
+      </tr>
+
+
+      <tr>
+        <th scope="row" colspan="3"><strong>Update names</strong></th>
+      </tr>
+      <tr>
+        <th scope="row">~10 nodes</th>
+        <td>
+          <button id="incremental-update-names-3-2" class="benchmark">Start</button>
+        </td>
+        <td>
+          <button id="react-update-names-3-2" class="benchmark">Start</button>
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">~30 nodes</th>
+        <td>
+          <button id="incremental-update-names-3-3" class="benchmark">Start</button>
+        </td>
+        <td>
+          <button id="react-update-names-3-3" class="benchmark">Start</button>
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">~100 nodes</th>
+        <td>
+          <button id="incremental-update-names-10-2" class="benchmark">Start</button>
+        </td>
+        <td>
+          <button id="react-update-names-10-2" class="benchmark">Start</button>
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">~256 nodes</th>
+        <td>
+          <button id="incremental-update-names-4-4" class="benchmark">Start</button>
+        </td>
+        <td>
+          <button id="react-update-names-4-4" class="benchmark">Start</button>
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">~1000 nodes</th>
+        <td>
+          <button id="incremental-update-names-10-3" class="benchmark">Start</button>
+        </td>
+        <td>
+          <button id="react-update-names-10-3" class="benchmark">Start</button>
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">~4000 nodes</th>
+        <td>
+          <button id="incremental-update-names-8-4" class="benchmark">Start</button>
+        </td>
+        <td>
+          <button id="react-update-names-8-4" class="benchmark">Start</button>
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">~10000 nodes</th>
+        <td>
+          <button id="incremental-update-names-10-4" class="benchmark">Start</button>
+        </td>
+        <td>
+          <button id="react-update-names-10-4" class="benchmark">Start</button>
+        </td>
+      </tr>
+
+
+      <tr>
+        <th scope="row" colspan="3"><strong>Reorder names</strong></th>
+      </tr>
+      <tr>
+        <th scope="row">~10 nodes</th>
+        <td>
+          <button id="incremental-reorder-children-3-2" class="benchmark">Start</button>
+        </td>
+        <td>
+          <button id="react-reorder-children-3-2" class="benchmark">Start</button>
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">~30 nodes</th>
+        <td>
+          <button id="incremental-reorder-children-3-3" class="benchmark">Start</button>
+        </td>
+        <td>
+          <button id="react-reorder-children-3-3" class="benchmark">Start</button>
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">~100 nodes</th>
+        <td>
+          <button id="incremental-reorder-children-10-2" class="benchmark">Start</button>
+        </td>
+        <td>
+          <button id="react-reorder-children-10-2" class="benchmark">Start</button>
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">~256 nodes</th>
+        <td>
+          <button id="incremental-reorder-children-4-4" class="benchmark">Start</button>
+        </td>
+        <td>
+          <button id="react-reorder-children-4-4" class="benchmark">Start</button>
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">~1000 nodes</th>
+        <td>
+          <button id="incremental-reorder-children-10-3" class="benchmark">Start</button>
+        </td>
+        <td>
+          <button id="react-reorder-children-10-3" class="benchmark">Start</button>
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">~4000 nodes</th>
+        <td>
+          <button id="incremental-reorder-children-8-4" class="benchmark">Start</button>
+        </td>
+        <td>
+          <button id="react-reorder-children-8-4" class="benchmark">Start</button>
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">~10000 nodes</th>
+        <td>
+          <button id="incremental-reorder-children-10-4" class="benchmark">Start</button>
+        </td>
+        <td>
+          <button id="react-reorder-children-10-4" class="benchmark">Start</button>
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  <div id="testbed"></div>
+
+  <script src="build/index.js"></script>
+</body>
+</html>
