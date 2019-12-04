@@ -28,6 +28,6 @@ export function summariseChildren(element: ChildNode): SummarisedChild[] {
   return Array.from(element.childNodes).map(summarise);
 }
 
-export function node(tag: string, children: SummarisedChild | SummarisedChild[]): SummarisedChild {
+export function node(tag: string, children: SummarisedChild | SummarisedChild[] = []): SummarisedChild {
   return { tag, children: Array.isArray(children) ? children : [children] };
 }
