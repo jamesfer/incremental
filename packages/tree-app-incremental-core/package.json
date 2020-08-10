@@ -6,7 +6,7 @@
   "license": "MIT",
   "scripts": {
     "build": "rollup --config rollup.config.js",
-    "declarations": "tsc --project tsconfig.json --declaration --declarationMap --emitDeclarationOnly",
+    "declarations": "tsc --project tsconfig.build.json --declaration --declarationMap --emitDeclarationOnly",
     "optimize": "webpack --config webpack.config.js -p",
     "buildw": "webpack --config webpack.config.js",
     "watch": "webpack --config webpack.config.js --watch"

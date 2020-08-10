@@ -1,5 +1,6 @@
+import { State } from 'tree-app-incremental-core';
 import { BenchmarkRenderer, BenchmarkRunner } from '../run-benchmark';
-import { State, Tree } from 'tree-app-incremental-core';
+import { generateState } from '../state-utils';
 
 export interface FirstRenderBenchmarkOptions {
   childCount: number;
@@ -7,7 +8,9 @@ export interface FirstRenderBenchmarkOptions {
 }
 
 class FirstRenderBenchmark implements BenchmarkRunner<State> {
-  private initialState: State | undefined;
+  private readonly emptyState: State = { trees: { 1: { id: '1', value: 'root' } }, treeRelations: {} };
+  private populatedStates: State[] = [];
+  private isEmpty = true;
   private readonly childCount: number;
   private readonly childDepth: number;
 
@@ -16,61 +19,27 @@ class FirstRenderBenchmark implements BenchmarkRunner<State> {
     this.childDepth = childDepth;
   }
 
-  initialize() {
-    this.initialState = this.generateState().state;
+  initialize(renderer: BenchmarkRenderer<State>, frames: number) {
+    renderer.mount(this.emptyState);
+    this.populatedStates = Array(frames).fill(0).map(() => generateState(this.childDepth, this.childCount).state);
   }
 
-  async run(renderer: BenchmarkRenderer<State>): Promise<void> {
-    if (!this.initialState) {
+  async tick(renderer: BenchmarkRenderer<State>, index: number): Promise<void> {
+    if (this.populatedStates.length === 0) {
       throw new Error('Called run before initialize');
     }
 
-    renderer.mount(this.initialState);
-    await renderer.waitForRender();
-  }
-
-  private generateState(): { tree: Tree, state: State } {
-    const tree = this.generateTree('1', 'root');
-    const treeChildren = [[tree]];
-    const state = {
-      treeRelations: {},
-      trees: { [tree.id]: tree },
-    };
-    for (let d = 0; d < this.childDepth; d++) {
-      // For each previous child create more children
-      for (let i = 0; i < treeChildren[d].length; i++) {
-        const children = this.generateChildren(this.childCount);
-        // Add the children to the tree
-        Object.assign(state.trees, children);
-        // Add the children to their parent
-        Object.assign(state.treeRelations, { [treeChildren[d][i].id]: Object.keys(children) });
-        // Add the children to the level array
-        treeChildren[d + 1] = treeChildren[d + 1] || [];
-        treeChildren[d + 1].push(...Object.values(children));
-      }
+    if (this.isEmpty) {
+      renderer.update((state) => {
+        state.overwrite(this.populatedStates[index % this.populatedStates.length]);
+      });
+      this.isEmpty = false;
+    } else {
+      renderer.update((state) => {
+        state.overwrite(this.emptyState);
+      });
+      this.isEmpty = true;
     }
-    return { tree, state };
-  }
-
-
-  private generateChildren(childCount: number): { [k: string]: Tree } {
-    const trees: { [k: string]: Tree } = {};
-    for (let i = 0; i < childCount; i++) {
-      const tree = this.generateTree();
-      trees[tree.id] = tree;
-    }
-    return trees;
-  }
-
-  private generateTree(
-    id: string = this.randomString(),
-    value: string = this.randomString(),
-  ): Tree {
-    return { id, value };
-  }
-
-  private randomString(): string {
-    return (+Math.random().toString().slice(2)).toString(32);
   }
 }
 

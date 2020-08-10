@@ -21,3 +21,11 @@ export function assertNever(x: never, error?: Error): never {
 
   return x;
 }
+
+export function waitForRaf<T>(cb: () => T | Promise<T>): Promise<T> {
+  return new Promise<T>((resolve) => {
+    requestAnimationFrame(async () => {
+      resolve(await cb());
+    });
+  });
+}

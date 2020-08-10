@@ -191,22 +191,26 @@ function renderTextChild(
   previousState: NodeState | undefined,
   cacheState: CacheState,
 ): [InsertionPoint, TextNodeState | undefined] {
-  if (previousState && isTextNodeState(previousState)) {
-    if (cacheState === CacheState.Valid) {
-      return [insertionPoint, previousState];
-    }
-
-    if (cacheState === CacheState.Invalid && previousState instanceof Text) {
-      const value = textChildValue(child);
-      if (typeof value === 'string') {
-        if (previousState.textContent !== value) {
-          previousState.textContent = value;
-        }
-        insertNode(insertionPoint, previousState);
-        return [afterInsertionPoint(previousState), previousState];
-      } else {
-        removeNode(previousState);
+  if (previousState) {
+    if (isTextNodeState(previousState)) {
+      if (cacheState === CacheState.Valid) {
+        return [insertionPoint, previousState];
       }
+
+      if (cacheState === CacheState.Invalid && previousState instanceof Text) {
+        const value = textChildValue(child);
+        if (typeof value === 'string') {
+          if (previousState.textContent !== value) {
+            previousState.textContent = value;
+          }
+          insertNode(insertionPoint, previousState);
+          return [afterInsertionPoint(previousState), previousState];
+        } else {
+          removeNode(previousState);
+        }
+      }
+    } else {
+      removePreviousState(previousState);
     }
   }
 
@@ -214,11 +218,9 @@ function renderTextChild(
   if (typeof value === 'string') {
     const node = document.createTextNode(value);
     insertNode(insertionPoint, node);
-    if (previousState) {
-      removePreviousState(previousState);
-    }
     return [afterInsertionPoint(node), node];
   }
+
   return [insertionPoint, undefined];
 }
 
@@ -374,8 +376,12 @@ function renderArrayChild(
   let nextInsertionPoint = insertionPoint;
 
   let previousChildren: Dictionary<NodeState> = {};
-  if (previousState && isArrayNodeState(previousState)) {
-    previousChildren = previousState.keyedChildren;
+  if (previousState) {
+    if (isArrayNodeState(previousState)) {
+      previousChildren = previousState.keyedChildren;
+    } else {
+      removePreviousState(previousState);
+    }
   }
 
   children.forEach((child) => {
@@ -394,6 +400,13 @@ function renderArrayChild(
 
     const previousChild = previousChildren[key];
     ([nextInsertionPoint, newChildren[key]] = render(nextInsertionPoint, child, invalidated, previousChild, cacheState));
+  });
+
+  // Remove any children that are not in the current array
+  Object.keys(previousChildren).forEach((key) => {
+    if (!(key in newChildren)) {
+      removePreviousState(previousChildren[key]);
+    }
   });
 
   return [nextInsertionPoint, { keyedChildren: newChildren }];

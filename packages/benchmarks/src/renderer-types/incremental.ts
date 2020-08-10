@@ -2,10 +2,16 @@ import { App, createElement, Store } from 'incremental';
 import { root, State } from 'tree-app-incremental-core';
 import { BenchmarkRenderer } from '../run-benchmark';
 import { StateController } from '../state-controller';
-import { defer } from '../utils';
 
 class IncrementalStateController implements StateController {
   constructor(private store: Store<State>) {}
+
+  overwrite(newState: State) {
+    this.store.change((state) => {
+      state.trees = newState.trees;
+      state.treeRelations = newState.treeRelations;
+    });
+  }
 
   setName(id: string, name: string) {
     this.store.change((state) => {
@@ -29,20 +35,7 @@ class IncrementalBenchmarkRenderer implements BenchmarkRenderer<State> {
   constructor(private container: HTMLElement) {}
 
   initialize(): () => void {
-    const originalRaf = window.requestAnimationFrame;
-    const originalCaf = window.cancelAnimationFrame;
-
-    window.requestAnimationFrame = (cb) => {
-      return setTimeout(cb, 0);
-    };
-    window.cancelAnimationFrame = (id) => {
-      clearTimeout(id);
-    };
-
-    return () => {
-      window.requestAnimationFrame = originalRaf;
-      window.cancelAnimationFrame = originalCaf;
-    };
+    return () => {};
   }
 
   mount(state: State) {
@@ -64,10 +57,6 @@ class IncrementalBenchmarkRenderer implements BenchmarkRenderer<State> {
     }
 
     createNewState(this.stateController);
-  }
-
-  async waitForRender(): Promise<void> {
-    await defer();
   }
 }
 

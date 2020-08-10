@@ -1,5 +1,7 @@
 import { Store } from "./store";
+import { isStore } from './storeUtils';
 import { getPath } from './utils';
+import { ReadableStore } from './readableStore';
 
 export interface Reference<S> {
   path: (string | number)[];
@@ -11,11 +13,11 @@ export interface ComputedValue<S> {
 }
 
 
-export function get<S, K1 extends keyof S>(value: ComputedValue<S> | Store<S>, keys: [K1]): ComputedValue<S>; // S[K1] | undefined;
-export function get<S, K1 extends keyof S, K2 extends keyof S[K1]>(value: ComputedValue<S> | Store<S>, keys: [K1, K2]): ComputedValue<S>; // S[K1][K2] | undefined;
-export function get<S, K1 extends keyof S, K2 extends keyof S[K1], K3 extends keyof S[K1][K2]>(value: ComputedValue<S> | Store<S>, keys: [K1, K2, K3]): ComputedValue<S>; // S[K1][K2][K3] | undefined;
-export function get<S>(ref: ComputedValue<S> | Store<S>, keys: string[]): ComputedValue<S> {
-  if (Store.isStore(ref)) {
+export function get<S, K1 extends keyof S>(value: ComputedValue<S> | ReadableStore<S>, keys: [K1]): ComputedValue<S>; // S[K1] | undefined;
+export function get<S, K1 extends keyof S, K2 extends keyof S[K1]>(value: ComputedValue<S> | ReadableStore<S>, keys: [K1, K2]): ComputedValue<S>; // S[K1][K2] | undefined;
+export function get<S, K1 extends keyof S, K2 extends keyof S[K1], K3 extends keyof S[K1][K2]>(value: ComputedValue<S> | ReadableStore<S>, keys: [K1, K2, K3]): ComputedValue<S>; // S[K1][K2][K3] | undefined;
+export function get<S>(ref: ComputedValue<S> | ReadableStore<S>, keys: string[]): ComputedValue<S> {
+  if (isStore(ref)) {
     const reference: Reference<S> = { path: keys };
     return {
       references: [reference],

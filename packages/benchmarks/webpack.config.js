@@ -1,16 +1,25 @@
 const path = require('path');
 
-module.exports = {
+const configs = [
+  { entry: './src/index.ts', outputFilename: 'index.js' },
+  { entry: './src/benchmark-index.ts', outputFilename: 'benchmark-index.js' },
+  { entry: './src/execute-benchmark.ts', outputFilename: 'execute-benchmark.js' },
+];
+
+module.exports = configs.map(({ entry, outputFilename }) => ({
+  entry,
   mode: 'development',
   target: 'web',
   devtool: 'source-map',
-  entry: './src/index.ts',
   output: {
-    filename: 'index.js',
+    filename: outputFilename,
     path: path.resolve(__dirname, 'build'),
   },
   resolve: {
     extensions: ['.ts', '.tsx', '.js', '.jsx', '.json'],
+  },
+  devServer: {
+    publicPath: '/build/',
   },
   module: {
     rules: [
@@ -30,4 +39,4 @@ module.exports = {
       },
     ],
   },
-};
+}));

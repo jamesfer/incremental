@@ -1,4 +1,4 @@
-import { createElement, FunctionComponent, get, map, Store } from 'incremental';
+import { createElement, FunctionComponent, get, map, ReadableStore } from 'incremental';
 import { State } from './state';
 
 export interface TreeProps {
@@ -11,7 +11,7 @@ export interface TreeProps {
  * to inject it. In a regular React component, you would probably do this with contexts.
  * We also need to store the component in a variable so that we can refer to it recursively.
  */
-const tree = (store: Store<State>): FunctionComponent<TreeProps> => {
+const tree = (store: ReadableStore<State>): FunctionComponent<TreeProps> => {
   const Tree: FunctionComponent<TreeProps> = ({ key, id }) => {
     // Access a value from the central store. This returns a placeholder value that will be filled
     // with actual value when needed.

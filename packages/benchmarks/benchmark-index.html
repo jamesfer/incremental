@@ -1,0 +1,71 @@
+<html>
+<head>
+  <title>Incremental vs React Benchmarks</title>
+  <meta charset="utf8" />
+  <link href="https://fonts.googleapis.com/css2?family=Open+Sans&display=swap" rel="stylesheet">
+  <style>
+    body {
+      padding: 0;
+      margin: 0;
+      display: flex;
+      height: 100%;
+      font-family: 'Open Sans', sans-serif;
+    }
+    .content {
+      padding: 20px;
+      max-width: 800px;
+      margin: auto;
+    }
+
+    .benchmark-table {
+      border-collapse: collapse;
+    }
+
+    .benchmark-table th, .benchmark-table td {
+      text-align: left;
+      padding: 7px 11px;
+      font-weight: normal;
+    }
+
+    .header-row th {
+      border-bottom: 1px solid #ddd;
+    }
+
+    td {
+      width: 200px;
+    }
+
+    button {
+      appearance: none;
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      background-color: white;
+      padding: 5px 12px;
+      border-radius: 3px;
+      border: 1px solid #aaa;
+    }
+
+    button:hover {
+      background-color: #eee;
+      cursor: pointer;
+    }
+
+    button:disabled {
+      border-color: #ddd;
+    }
+
+    .float-right {
+      float: right;
+    }
+  </style>
+</head>
+<body>
+  <div class="content">
+    <button onclick="runAllBenchmarks()">Run all</button>
+    <button onclick="logResultsCsv()" class="float-right">Log results CSV</button>
+    <table id="benchmark-table" class="benchmark-table"></table>
+  </div>
+
+  <script src="build/benchmark-index.js"></script>
+</body>
+</html>

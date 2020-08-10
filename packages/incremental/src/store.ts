@@ -1,8 +1,9 @@
 import produce, { Patch } from 'immer';
 import { App } from './app';
+import { ReadableStore } from './readableStore';
 
-export class Store<S> {
-  public readonly _class = 'Store';
+export class Store<S> implements ReadableStore<S> {
+  public readonly _class = 'IncrementalStore';
   private state: S;
   private boundOnPatch = this.onPatch.bind(this);
   private app: App | undefined;
@@ -25,10 +26,6 @@ export class Store<S> {
 
   getState(): S {
     return this.state;
-  }
-
-  static isStore(store: unknown): store is Store<any> {
-    return typeof store === 'object' && !!store && (store as Store<any>)._class === 'Store';
   }
 
   private onPatch(patches: Patch[]): void {

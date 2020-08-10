@@ -2,6 +2,7 @@ import FirstRenderBenchmark, { FirstRenderBenchmarkOptions } from './benchmark-t
 import ReorderChildrenBenchmark, { ReorderChildrenBenchmarkOptions } from './benchmark-types/reorder-children';
 import UpdateNamesBenchmark, { UpdateNamesBenchmarkOptions } from './benchmark-types/update-names';
 import IncrementalBenchmarkRenderer from './renderer-types/incremental';
+import IncrementalTrackedBenchmarkRenderer from './renderer-types/incremental-tracked';
 import ReactBenchmarkRenderer from './renderer-types/react';
 import runBenchmark, { BenchmarkRenderer, BenchmarkRunner } from './run-benchmark';
 
@@ -13,6 +14,7 @@ export interface BenchmarkOptions {
 
 export interface RendererOptions {
   incremental: void;
+  incrementalTracked: void;
   react: void;
 }
 
@@ -32,6 +34,9 @@ function constructRenderer(
   switch (rendererType) {
     case 'incremental':
       return container => new IncrementalBenchmarkRenderer(container);
+
+    case 'incrementalTracked':
+      return container => new IncrementalTrackedBenchmarkRenderer(container);
 
     case 'react':
       return container => new ReactBenchmarkRenderer(container);
@@ -74,11 +79,10 @@ async function pickBenchmark<B extends BenchmarkType>(
   rendererType: RendererType,
   benchmarkType: B,
   options: BenchmarkOptions[B],
-) {
+): Promise<number> {
   const renderer = constructRenderer(rendererType);
   const runner = constructBenchmark(benchmarkType, options);
-  const times = await runBenchmark(renderer, runner);
-  return computeResults(times);
+  return runBenchmark(renderer, runner);
 }
 
 export default pickBenchmark;

@@ -1,15 +1,19 @@
 import { createElement } from 'react';
 import { render } from 'react-dom';
-import { Root, RootProps, State } from 'tree-app-react-core';
+import { Root, State } from 'tree-app-react-core';
 import { BenchmarkRenderer } from '../run-benchmark';
 import { StateController } from '../state-controller';
-import { defer } from '../utils';
 
 class ReactStateController implements StateController {
   private state: State;
 
   constructor(initialState: State, private dispatch: (state: State) => void) {
     this.state = initialState;
+  }
+
+  overwrite(newState: State) {
+    this.state = newState;
+    this.dispatch(this.state);
   }
 
   setName(id: string, value: string): void {
@@ -48,25 +52,12 @@ class ReactBenchmarkRenderer implements BenchmarkRenderer<State> {
   constructor(private container: HTMLElement) {}
 
   initialize(): () => void {
-    const originalRaf = window.requestAnimationFrame;
-    const originalCaf = window.cancelAnimationFrame;
-
-    window.requestAnimationFrame = (cb) => {
-      return setTimeout(cb, 0);
-    };
-    window.cancelAnimationFrame = (id) => {
-      clearTimeout(id);
-    };
-
-    return () => {
-      window.requestAnimationFrame = originalRaf;
-      window.cancelAnimationFrame = originalCaf;
-    };
+    return () => {};
   }
 
   mount(initialState: State) {
     if (this.mounted) {
-      throw new Error('Called render twice');
+      throw new Error('Called mount twice');
     }
 
     const element = createElement(Root, {
@@ -90,10 +81,6 @@ class ReactBenchmarkRenderer implements BenchmarkRenderer<State> {
     }
 
     createNewState(this.stateController);
-  }
-
-  async waitForRender(): Promise<void> {
-    await defer();
   }
 }
 
