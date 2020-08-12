@@ -10,17 +10,26 @@ jobs:
           node-version: 12
       - run: yarn install
       - name: Build incremental
-        run: yarn build
         working-directory: packages/incremental
+        run: yarn build
+      - name: Build incremental type declarations
+        working-directory: packages/incremental
+        run: yarn declarations
       - name: Build tree app
-        run: yarn build
         working-directory: packages/tree-app-incremental-core
+        run: yarn build
+      - name: Build tree app type declarations
+        working-directory: packages/tree-app-incremental-core
+        run: yarn declarations
       - name: Build tree app (react)
-        run: yarn build
         working-directory: packages/tree-app-react-core
-      - name: Build benchmarks
         run: yarn build
+      - name: Build tree app type declarations (react)
+        working-directory: packages/tree-app-react-core
+        run: yarn declarations
+      - name: Build benchmarks
         working-directory: packages/benchmarks
+        run: yarn build
       - name: Deploy
         if: github.ref == 'refs/heads/master' && success()
         uses: peaceiris/actions-gh-pages@v3
