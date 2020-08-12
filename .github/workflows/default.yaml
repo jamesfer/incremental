@@ -1,0 +1,30 @@
+name: CI
+on: push
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v1
+        with:
+          node-version: 12
+      - run: yarn install
+      - name: Build incremental
+        run: yarn build
+        working-directory: packages/incremental
+      - name: Build tree app
+        run: yarn build
+        working-directory: packages/tree-app-incremental-core
+      - name: Build tree app (react)
+        run: yarn build
+        working-directory: packages/tree-app-react-core
+      - name: Build benchmarks
+        run: yarn build
+        working-directory: packages/benchmarks
+      - name: Deploy
+        if: github.ref == 'refs/heads/master' && success()
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: packages/benchmarks/build
+          exclude_assets: .github,src/**/*,package.json,tsconfig.json,webpack.config.js
