@@ -8,6 +8,7 @@ export default {
     file: 'build/index.js',
     format: 'esm',
     sourcemap: true,
+    compact: true,
   },
   external: ['react', 'react-dom'],
   plugins: [

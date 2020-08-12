@@ -29,7 +29,7 @@ jobs:
         run: yarn declarations
       - name: Build benchmarks
         working-directory: packages/benchmarks
-        run: yarn build
+        run: yarn optimize
       - name: Deploy
         if: github.ref == 'refs/heads/master' && success()
         uses: peaceiris/actions-gh-pages@v3
