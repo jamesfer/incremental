@@ -30,10 +30,12 @@ jobs:
       - name: Build benchmarks
         working-directory: packages/benchmarks
         run: yarn optimize
+      - name: Copy html files to build dir
+        working-directory: packages/benchmarks
+        run: cp benchmark-index.html build && cp run-benchmark.html build
       - name: Deploy
         if: github.ref == 'refs/heads/master' && success()
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: packages/benchmarks/build
-          exclude_assets: .github,src/**/*,package.json,tsconfig.json,webpack.config.js
