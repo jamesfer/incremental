@@ -23,10 +23,12 @@ class ReorderChildrenBenchmark implements BenchmarkRunner<State> {
   }
 
   tick(renderer: BenchmarkRenderer<State>) {
-    const { id, startIndex, endIndex } = this.generateSwap(this.initialState);
-    renderer.update((controller) => {
-      controller.moveChild(id, startIndex, endIndex);
-    });
+    for (let i = 0; i < 20; i++)  {
+      const { id, startIndex, endIndex } = this.generateSwap(this.initialState);
+      renderer.update((controller) => {
+        controller.moveChild(id, startIndex, endIndex);
+      });
+    }
   }
 
   private generateSwap(state: State): { id: string, startIndex: number, endIndex: number } {

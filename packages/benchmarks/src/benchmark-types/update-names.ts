@@ -23,10 +23,12 @@ class UpdateNamesBenchmark implements BenchmarkRunner<State> {
   }
 
   tick(renderer: BenchmarkRenderer<State>) {
-    const { id, name } = this.generateNewName(this.initialState);
-    renderer.update((controller) => {
-      controller.setName(id, name);
-    });
+    for (let i = 0; i < 20; i++) {
+      const { id, name } = this.generateNewName(this.initialState);
+      renderer.update((controller) => {
+        controller.setName(id, name);
+      });
+    }
   }
 
   private generateNewName(state: State): { id: string, name: string } {
