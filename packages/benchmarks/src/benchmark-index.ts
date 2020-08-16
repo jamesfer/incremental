@@ -13,18 +13,30 @@ const benchmarks: { title: string, type: BenchmarkType }[] = [
   { title: 'Reorder children', type: 'reorderChildren' },
 ];
 
+// const counts: [number, number][] = [
+//   [3, 2],
+//   [3, 3],
+//   [10, 2],
+//   [4, 4],
+//   [10, 3],
+//   [8, 4],
+//   [10, 4],
+// ];
+
 const counts: [number, number][] = [
-  [3, 2],
-  [3, 3],
-  [10, 2],
-  [4, 4],
-  [10, 3],
-  [8, 4],
-  [10, 4],
+    [ 2, 4 ], [ 3, 3 ],  [ 2, 5 ],
+    [ 4, 3 ], [ 3, 4 ],  [ 11, 2 ],
+    [ 5, 3 ], [ 13, 2 ], [ 14, 2 ],
+    [ 6, 3 ], [ 17, 2 ], [ 4, 4 ],
+    [ 3, 5 ], [ 7, 3 ],  [ 21, 2 ],
+    [ 8, 3 ], [ 5, 4 ],  [ 9, 3 ],
+    [3, 6], [4, 5], [6, 4],
 ];
 
 function makeEmptyCountResults(): { [k: number]: number[] } {
-  return counts.map(([count, depth]) => ({ [count ** depth]: [] })).reduce(Object.assign);
+  return counts
+    .map(([count, depth]) => ({ [count ** depth]: [] }))
+    .reduce((a, b) => Object.assign(a, b), {});
 }
 
 function makeEmptyBenchmarkResults(): { [k in RendererType]: { [k: number]: number[] } } {
@@ -175,21 +187,21 @@ function initialize() {
 
 initialize();
 
-// function generateChildCounts(): { childCount: number, childDepth: number, total: number, leaves: number }[] {
-//   const childCounts = Array(20).fill(0).map((_, i) => i + 2);
-//   const childDepths = Array(20).fill(0).map((_, i) => i + 2);
-//   const counts = ([] as any[]).concat(
-//     ...childCounts.map(childCount => (
-//       childDepths.map(childDepth => ({
-//         childCount,
-//         childDepth,
-//         leaves: childCount ** childDepth,
-//         total: Array(childDepth).fill(0).map((_, i) => childCount ** (i + 1)).reduce((a, b) => a + b) + 1,
-//       })).filter(({ total }) => total <= 1024)
-//     )),
-//   );
-//   counts.sort((a, b) => a.total - b.total);
-//   return counts;
-// }
-//
-// (window as any).generateChildCounts = generateChildCounts;
+function generateChildCounts(): { childCount: number, childDepth: number, total: number, leaves: number }[] {
+  const childCounts = Array(20).fill(0).map((_, i) => i + 2);
+  const childDepths = Array(20).fill(0).map((_, i) => i + 2);
+  const counts = ([] as any[]).concat(
+    ...childCounts.map(childCount => (
+      childDepths.map(childDepth => ({
+        childCount,
+        childDepth,
+        leaves: childCount ** childDepth,
+        total: Array(childDepth).fill(0).map((_, i) => childCount ** (i + 1)).reduce((a, b) => a + b) + 1,
+      })).filter(({ total }) => total <= 4024)
+    )),
+  );
+  counts.sort((a, b) => a.total - b.total);
+  return counts;
+}
+
+(window as any).generateChildCounts = generateChildCounts;
