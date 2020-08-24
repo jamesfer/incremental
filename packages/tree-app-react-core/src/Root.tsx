@@ -1,6 +1,7 @@
 import * as React from 'react';
-import { FC, useReducer, useEffect } from 'react';
-import { State, StateContext } from './state';
+import { FC } from 'react';
+import { State } from './state';
+import { StoreProvider } from './StateProvider';
 import Tree from './Tree';
 
 export interface RootProps {
@@ -9,21 +10,11 @@ export interface RootProps {
   dispatchCallback?(dispatch: (action: any) => void): void;
 }
 
-const Root: FC<RootProps> = ({ initialState, reducer, dispatchCallback }) => {
-  const [state, dispatch] = useReducer(reducer, initialState);
-  useEffect(
-    () => {
-      if (dispatchCallback) {
-        dispatchCallback(dispatch);
-      }
-    },
-    [dispatchCallback, dispatch],
-  );
-
+const Root: FC<RootProps> = (props) => {
   return (
-    <StateContext.Provider value={state}>
+    <StoreProvider {...props}>
       <Tree id="1" />
-    </StateContext.Provider>
+    </StoreProvider>
   );
 };
 

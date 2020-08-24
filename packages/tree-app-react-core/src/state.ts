@@ -9,5 +9,3 @@ export interface Tree {
   id: string;
   value: string;
 }
-
-export const StateContext = createContext<State>({ trees: {}, treeRelations: {} });

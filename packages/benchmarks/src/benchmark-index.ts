@@ -35,9 +35,13 @@ const counts: [number, number][] = [
   [ 12, 3 ]
 ];
 
+function computeTotalNodeCount(childCount: number, childDepth: number): number {
+  return Array(childDepth).fill(0).map((_, i) => childCount ** (i + 1)).reduce((a, b) => a + b) + 1;
+}
+
 function makeEmptyCountResults(): { [k: number]: number[] } {
   return counts
-    .map(([count, depth]) => ({ [count ** depth]: [] }))
+    .map(([count, depth]) => ({ [computeTotalNodeCount(count, depth)]: [] }))
     .reduce((a, b) => Object.assign(a, b), {});
 }
 
@@ -90,11 +94,12 @@ async function runBenchmark(renderer: RendererType, benchmark: BenchmarkType, ch
   window.open(`./run-benchmark.html?${queryString.stringify(parameters)}`);
 
   const data = JSON.parse(await nextMessageEvent());
-  allResults[benchmark][renderer][childCount ** childDepth].push(data.time);
+  const nodeCount = computeTotalNodeCount(childCount, childDepth);
+  allResults[benchmark][renderer][nodeCount].push(data.time);
   console.log('Benchmark finished', parameters, data.time);
 
   const resultComponent = requireElement(`#${resultComponentId(renderer, benchmark, childCount, childDepth)}`);
-  resultComponent.textContent = allResults[benchmark][renderer][childCount ** childDepth].map(time => `${(time / 400).toFixed(2)}ms`).join(', ');
+  resultComponent.textContent = allResults[benchmark][renderer][nodeCount].map(time => `${(time / 400).toFixed(2)}ms`).join(', ');
 }
 
 async function runAllBenchmarks() {
@@ -115,7 +120,7 @@ function makeResultsCsv(): string {
   for (const benchmark of benchmarks) {
     for (const renderer of renderers) {
       for (const [childCount, childDepth] of counts) {
-        maxLengths[renderer.type] = Math.max(maxLengths[renderer.type], allResults[benchmark.type][renderer.type][childCount ** childDepth].length);
+        maxLengths[renderer.type] = Math.max(maxLengths[renderer.type], allResults[benchmark.type][renderer.type][computeTotalNodeCount(childCount, childDepth)].length);
       }
     }
   }
@@ -132,7 +137,7 @@ function makeResultsCsv(): string {
     for (const [childCount, childDepth] of counts) {
       csv += `${benchmark.title},${childCount ** childDepth},`;
       for (const renderer of renderers) {
-        const results = allResults[benchmark.type][renderer.type][childCount ** childDepth];
+        const results = allResults[benchmark.type][renderer.type][computeTotalNodeCount(childCount, childDepth)];
         for (let i = 0; i < maxLengths[renderer.type]; i++) {
           if (i < results.length) {
             csv += `${results[i] / 400},`;
@@ -188,22 +193,3 @@ function initialize() {
 (window as any).logResultsCsv = logResultsCsv;
 
 initialize();
-
-function generateChildCounts(): { childCount: number, childDepth: number, total: number, leaves: number }[] {
-  const childCounts = Array(20).fill(0).map((_, i) => i + 2);
-  const childDepths = Array(20).fill(0).map((_, i) => i + 2);
-  const counts = ([] as any[]).concat(
-    ...childCounts.map(childCount => (
-      childDepths.map(childDepth => ({
-        childCount,
-        childDepth,
-        leaves: childCount ** childDepth,
-        total: Array(childDepth).fill(0).map((_, i) => childCount ** (i + 1)).reduce((a, b) => a + b) + 1,
-      })).filter(({ total }) => total <= 4024)
-    )),
-  );
-  counts.sort((a, b) => a.total - b.total);
-  return counts;
-}
-
-(window as any).generateChildCounts = generateChildCounts;

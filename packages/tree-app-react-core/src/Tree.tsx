@@ -1,15 +1,14 @@
 import * as React from 'react';
-import { FC, useContext } from 'react';
-import { StateContext } from './state';
+import { FC, useCallback } from 'react';
+import { useSelector } from './useSelector';
 
 export interface TreeProps {
   id: string;
 }
 
 const Tree: FC<TreeProps> = ({ id }) => {
-  const state = useContext(StateContext);
-  const tree = state.trees[id];
-  const childIds = state.treeRelations[id] || [];
+  const tree = useSelector(useCallback(state => state.trees[id], [id]));
+  const childIds = useSelector(useCallback(state => state.treeRelations[id] || [], [id]));
 
   return (
     <div>
