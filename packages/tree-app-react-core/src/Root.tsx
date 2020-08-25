@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { FC } from 'react';
+import { FC, memo } from 'react';
 import { State } from './state';
 import { StoreProvider } from './StateProvider';
 import Tree from './Tree';
@@ -10,12 +10,12 @@ export interface RootProps {
   dispatchCallback?(dispatch: (action: any) => void): void;
 }
 
-const Root: FC<RootProps> = (props) => {
+const Root: FC<RootProps> = memo((props) => {
   return (
     <StoreProvider {...props}>
       <Tree id="1" />
     </StoreProvider>
   );
-};
+});
 
 export default Root;

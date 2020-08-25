@@ -1,14 +1,16 @@
 import * as React from 'react';
-import { FC, useCallback } from 'react';
+import { FC, useCallback, memo } from 'react';
 import { useSelector } from './useSelector';
 
 export interface TreeProps {
   id: string;
 }
 
-const Tree: FC<TreeProps> = ({ id }) => {
+const empty: any[] = [];
+
+const Tree: FC<TreeProps> = memo(({ id }) => {
   const tree = useSelector(useCallback(state => state.trees[id], [id]));
-  const childIds = useSelector(useCallback(state => state.treeRelations[id] || [], [id]));
+  const childIds = useSelector(useCallback(state => state.treeRelations[id] || empty, [id]));
 
   return (
     <div>
@@ -24,6 +26,6 @@ const Tree: FC<TreeProps> = ({ id }) => {
       )}
     </div>
   );
-};
+});
 
 export default Tree;
