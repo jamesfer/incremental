@@ -45,14 +45,16 @@ export function updatePath<S>(object: S, keys: string[], operator: (value: any) 
     return object;
   }
 
-  const lastKey = keys[keys.length - 1];
   const newObject = { ...object };
-  const finalLevel = keys.slice(0, -1).reduce((current: any, key) => {
-    // Copy the value of the key and mutate the current level
-    current[key] = { ...current[key] };
-    return current[key];
-  }, newObject);
-  finalLevel[lastKey] = operator(finalLevel[lastKey]);
+  let nested: Record<any, any> = newObject;
+  for (let i = 0; i < keys.length - 1; i++) {
+    const key = keys[i];
+    nested[key] = { ...nested[key] };
+    nested = nested[key];
+  }
+
+  const key = keys[keys.length - 1];
+  nested[key] = operator(nested[key]);
   return newObject;
 }
 
