@@ -15,11 +15,11 @@ const tree = (store: ReadableStore<State>): FunctionComponent<TreeProps> => {
   const Tree: FunctionComponent<TreeProps> = ({ key, id }) => {
     // Access a value from the central store. This returns a placeholder value that will be filled
     // with actual value when needed.
-    const tree = get(store, ['trees', id]);
+    const tree = get(store, ['trees', id] as any);
     // Access a value from the central store and apply a function to it. Because get() only returns
     // a placeholder, we need to use the map function to perform an operation on the actual value.
     // The map function will be executed whenever part of the component needs to be updated.
-    const childIds = map(get(store, ['treeRelations', id]), ids => ids || []);
+    const childIds = map(get(store, ['treeRelations', id] as any), ids => ids || []);
     const title = map(tree, ({ value }) => value);
     return (
       <div key={key}>
@@ -28,7 +28,7 @@ const tree = (store: ReadableStore<State>): FunctionComponent<TreeProps> => {
           <ul>
             {ids.map(id => (
               <li key={id}>
-                <Tree id={id} />
+                <Tree id={id as any} />
               </li>
             ))}
           </ul>

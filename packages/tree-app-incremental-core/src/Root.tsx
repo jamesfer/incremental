@@ -5,7 +5,7 @@ import tree from './Tree';
 const root = (store: ReadableStore<State>): FunctionComponent => {
   const Tree = tree(store);
   return () => {
-    return <Tree id="1"/>;
+    return <Tree id={'1' as any} />;
   };
 };
 
