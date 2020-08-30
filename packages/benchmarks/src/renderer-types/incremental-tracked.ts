@@ -26,20 +26,9 @@ class IncrementalTrackedStateController implements StateController {
 
     this.store.change((transaction) => {
       changeAt(transaction, ['treeRelations', id], (relations) => {
-        if (startIndex < endIndex) {
-          return [
-            ...relations.slice(0, startIndex),
-            ...relations.slice(startIndex + 1, endIndex),
-            relations[startIndex],
-            ...relations.slice(endIndex),
-          ];
-        }
-        return [
-          ...relations.slice(0, endIndex),
-          relations[startIndex],
-          ...relations.slice(endIndex, startIndex),
-          ...relations.slice(startIndex + 1),
-        ];
+        const output = [...relations];
+        output.splice(endIndex, 0, ...output.splice(startIndex, 1));
+        return output;
       });
     });
   }

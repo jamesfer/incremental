@@ -1,3 +1,4 @@
+import { mapValues } from 'lodash-es';
 import { ComputedValue, Reference } from './free';
 import { anyReferencesOverlap, assertNever, assertType, Dictionary } from './utils';
 
@@ -5,14 +6,18 @@ export interface InternalProps {
   key?: string;
 }
 
-export type FunctionComponent<P extends Dictionary<any> = any> = (props: P & InternalProps) => ReturnType<typeof createElement>;
+export type ComputedProps<P> = {
+  [k in keyof P]: ComputedValue<any, P[k]>;
+}
+
+export type FunctionComponent<P extends Dictionary<any> = any> = (props: ComputedProps<P> & InternalProps) => ReturnType<typeof createElement>;
 
 const elementNodeKind = 'elementNode';
 // These can be children args to createElement
 export interface ElementNode {
   kind: any;
-  tag: string | FunctionComponent<any>;
-  props?: { [k: string]: Attribute } | null | undefined;
+  tag: string | FunctionComponent;
+  props?: ({ [k: string]: Attribute } & { key?: string }) | null | undefined;
   children: Child[];
 }
 export type TextChild = string | number | boolean | null | undefined | object;
@@ -24,6 +29,10 @@ export interface ElementNodeState {
   previousChildren: NodeState[];
   previousTag: HTMLElement | undefined;
 }
+export interface ComponentNodeState {
+  previousElement: ElementNode;
+  childState: NodeState;
+}
 export interface ComputedNodeState {
   previousChildren: Child;
   previousState: NodeState;
@@ -32,11 +41,11 @@ export interface ArrayNodeState {
   keyedChildren: Dictionary<NodeState>
 }
 export type TextNodeState = Text | undefined;
-export type NodeState = TextNodeState | ComputedNodeState | ArrayNodeState | ElementNodeState;
+export type NodeState = TextNodeState | ComputedNodeState | ArrayNodeState | ElementNodeState | ComponentNodeState;
 
 export type StaticAttribute = string | number | boolean | null | undefined;
 export type ComputedAttribute = ComputedValue<any>;
-export type Attribute = StaticAttribute | ComputedAttribute;
+export type Attribute = ComputedAttribute;
 
 enum CacheState {
   Empty,
@@ -65,11 +74,27 @@ function afterInsertionPoint(node: Node): InsertionPoint {
 }
 
 export function createElement(
-  tag: string | FunctionComponent<any>,
-  props?: { [k: string]: Attribute },
+  tag: string | FunctionComponent,
+  inputProps?: { [k: string]: ComputedValue<any> | StaticAttribute } & { key?: string },
   ...children: Child[]
 ): ElementNode {
-  return { tag, props, children, kind: elementNodeKind };
+  if (inputProps == undefined) {
+    return { tag, children, props: undefined, kind: elementNodeKind };
+  }
+
+  const props: ({ [k: string]: ComputedValue<any> } & { key?: string }) = {};
+  for (const key in inputProps) {
+    if (key === 'key') {
+      props.key = inputProps.key;
+    } else {
+      const value = inputProps[key];
+      props[key] = isComputedValue(value) ? value : {
+        references: [],
+        value: () => value,
+      };
+    }
+  }
+  return { tag, children, props, kind: elementNodeKind };
 }
 
 function removeNode(node: Node) {
@@ -135,6 +160,8 @@ function removePreviousState(state: NodeState) {
     }
   } else if (isComputedNodeState(state)) {
     removePreviousState(state.previousState);
+  } else if (isComponentNodeState(state)) {
+    removePreviousState(state.childState);
   } else {
     Object.values(state.keyedChildren).forEach(removePreviousState);
   }
@@ -144,6 +171,15 @@ function isComputedNodeState(state: Exclude<NodeState, undefined>): state is Com
   if ('previousState' in state) {
     // Confirm that the state is correctly narrowed
     assertType<ComputedNodeState>(state);
+    return true;
+  }
+  return false;
+}
+
+function isComponentNodeState(state: Exclude<NodeState, undefined>): state is ComponentNodeState {
+  if ('previousElement' in state) {
+    // Confirm that the state is correctly narrowed
+    assertType<ComponentNodeState>(state);
     return true;
   }
   return false;
@@ -203,8 +239,7 @@ function renderTextChild(
           if (previousState.textContent !== value) {
             previousState.textContent = value;
           }
-          insertNode(insertionPoint, previousState);
-          return [afterInsertionPoint(previousState), previousState];
+          return [insertionPoint, previousState];
         } else {
           removeNode(previousState);
         }
@@ -261,6 +296,14 @@ function isElementNode(object: unknown): object is ElementNode {
     && (object as any).kind === elementNodeKind;
 }
 
+function isStaticElementNode(node: ElementNode): node is ElementNode & { tag: string } {
+  return typeof node.tag === 'string';
+}
+
+function isComponentElementNode(node: ElementNode): node is ElementNode & { tag: FunctionComponent } {
+  return typeof node.tag !== 'string';
+}
+
 function isComputedValue(object: unknown): object is ComputedValue<any> {
   return typeof object === 'object'
     && object !== null
@@ -314,32 +357,50 @@ function produceElementTag(
       return previousTag;
     }
 
-    if (previousTag.nodeName === tag) {
+    if (previousTag.nodeName.toLowerCase() === tag) {
       return previousTag;
     }
   }
 
+  // console.log('Created tag', tag);
   return document.createElement(tag);
+}
+
+function renderComponentNode(
+  insertionPoint: InsertionPoint,
+  child: ElementNode & { tag: FunctionComponent },
+  invalidated: Reference<any>[],
+  previousState: NodeState | undefined,
+  cacheState: CacheState,
+): [InsertionPoint, ComponentNodeState] {
+  let previousComponentState: ComponentNodeState | undefined = undefined;
+  if (previousState && isComponentNodeState(previousState)) {
+    previousComponentState = previousState;
+  }
+  if (cacheState === CacheState.Empty || previousComponentState === undefined) {
+    const element = child.tag(child.props as any);
+    const [nextInsertionPoint, childState] = render(insertionPoint, element, invalidated, undefined, CacheState.Empty);
+    return [nextInsertionPoint, { childState, previousElement: element }]
+  } else {
+    const [nextInsertionPoint, childState] = render(insertionPoint, previousComponentState.previousElement, invalidated, previousComponentState.childState, cacheState);
+    return [nextInsertionPoint, { childState, previousElement: previousComponentState.previousElement }];
+  }
 }
 
 function renderElementNode(
   insertionPoint: InsertionPoint,
-  child: ElementNode,
+  child: ElementNode & { tag: string },
   invalidated: Reference<any>[],
   previousState: NodeState | undefined,
   cacheState: CacheState,
 ): [InsertionPoint, ElementNodeState] {
-  if (typeof child.tag !== 'string') {
-    return renderElementNode(insertionPoint, child.tag(child.props as any), invalidated, previousState, cacheState);
-  }
-
   let previousChildren: NodeState[] = [];
   let previousTag: HTMLElement | undefined = undefined;
   if (previousState && isElementNodeState(previousState)) {
     ({ previousChildren, previousTag } = previousState);
   }
 
-  // Create this element
+  // Create this element (tag's cannot ever change so we can reuse the previous tag)
   const tag = produceElementTag(child.tag, invalidated, previousTag, cacheState);
 
   // Update attributes
@@ -422,19 +483,31 @@ function render(insertionPoint: InsertionPoint, child: Child, invalidated: Refer
   }
 
   if (isElementNode(child)) {
-    return renderElementNode(insertionPoint, child, invalidated, previousState, cacheState);
+    if (isStaticElementNode(child)) {
+      return renderElementNode(insertionPoint, child, invalidated, previousState, cacheState);
+    } else if (isComponentElementNode(child)) {
+      return renderComponentNode(insertionPoint, child, invalidated, previousState, cacheState);
+    }
   }
 
   return renderTextChild(insertionPoint, child, invalidated, previousState, cacheState);
 }
 
-export function renderRootNode(container: HTMLElement, child: ElementNode, invalidated: Reference<any>[], previousChild?: ElementNodeState | undefined): ElementNodeState {
-  const [, element] = renderElementNode(
+export function renderRootNode(container: HTMLElement, child: ElementNode, invalidated: Reference<any>[], previousChild?: NodeState | undefined): NodeState {
+  const [, state] = render(
     childInsertionPoint(container),
     child,
     invalidated,
     previousChild,
     previousChild ? CacheState.Valid : CacheState.Empty,
   );
-  return element;
+  return state;
+  // const [, element] = renderElementNode(
+  //   childInsertionPoint(container),
+  //   child,
+  //   invalidated,
+  //   previousChild,
+  //   previousChild ? CacheState.Valid : CacheState.Empty,
+  // );
+  // return element;
 }
