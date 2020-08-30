@@ -38,7 +38,6 @@ async function runBenchmarkIteration<S>(
   const start = performance.now();
   const times = Array(frames);
   for (let i = 0; i < frames; i++) {
-    await new Promise(r => setTimeout(r, 1000));
     const frameStart = performance.now();
     await waitForRaf(() => runner.tick(renderer, i));
     const frameEnd = performance.now();

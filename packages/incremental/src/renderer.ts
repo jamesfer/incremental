@@ -239,8 +239,7 @@ function renderTextChild(
           if (previousState.textContent !== value) {
             previousState.textContent = value;
           }
-          insertNode(insertionPoint, previousState);
-          return [afterInsertionPoint(previousState), previousState];
+          return [insertionPoint, previousState];
         } else {
           removeNode(previousState);
         }
