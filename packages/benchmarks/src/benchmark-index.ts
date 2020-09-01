@@ -135,7 +135,7 @@ function makeResultsCsv(): string {
 
   for (const benchmark of benchmarks) {
     for (const [childCount, childDepth] of counts) {
-      csv += `${benchmark.title},${childCount ** childDepth},`;
+      csv += `${benchmark.title},${computeTotalNodeCount(childCount, childDepth)},`;
       for (const renderer of renderers) {
         const results = allResults[benchmark.type][renderer.type][computeTotalNodeCount(childCount, childDepth)];
         for (let i = 0; i < maxLengths[renderer.type]; i++) {
