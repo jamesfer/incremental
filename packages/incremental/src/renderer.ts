@@ -1,4 +1,3 @@
-import { mapValues } from 'lodash-es';
 import { ComputedValue, Reference } from './free';
 import { anyReferencesOverlap, assertNever, assertType, Dictionary } from './utils';
 
@@ -53,24 +52,28 @@ enum CacheState {
   Invalid,
 }
 
-interface InsertChild {
-  kind: 'child';
-  node: Node;
-}
+class InsertionPoint {
+  private constructor(public kind: 'child' | 'after', public node: Node) {}
 
-interface InsertAfter {
-  kind: 'after';
-  node: Node;
-}
+  static createAtChildOf(node: Node): InsertionPoint {
+    return new InsertionPoint('child', node);
+  }
 
-type InsertionPoint = InsertChild | InsertAfter;
+  static createAfter(node: Node): InsertionPoint {
+    return new InsertionPoint('after', node);
+  }
 
-function childInsertionPoint(node: Node): InsertionPoint {
-  return { kind: 'child', node };
-}
+  updateToAfter(node: Node): InsertionPoint {
+    this.kind = 'after';
+    this.node = node;
+    return this;
+  }
 
-function afterInsertionPoint(node: Node): InsertionPoint {
-  return { kind: 'after', node };
+  updateToChildOf(node: Node): InsertionPoint {
+    this.kind = 'child';
+    this.node = node;
+    return this;
+  }
 }
 
 export function createElement(
@@ -123,7 +126,7 @@ function moveNode(insertionPoint: InsertionPoint, replacing: Node) {
       break;
 
     default:
-      assertNever(insertionPoint);
+      assertNever(insertionPoint.kind);
   }
 }
 
@@ -143,7 +146,7 @@ function insertNode(insertionPoint: InsertionPoint, node: Node) {
       break;
 
     default:
-      assertNever(insertionPoint);
+      assertNever(insertionPoint.kind);
   }
 }
 
@@ -226,11 +229,11 @@ function renderTextChild(
   invalidated: Reference<any>[],
   previousState: NodeState | undefined,
   cacheState: CacheState,
-): [InsertionPoint, TextNodeState | undefined] {
+): TextNodeState | undefined {
   if (previousState) {
     if (isTextNodeState(previousState)) {
       if (cacheState === CacheState.Valid) {
-        return [insertionPoint, previousState];
+        return previousState;
       }
 
       if (cacheState === CacheState.Invalid && previousState instanceof Text) {
@@ -239,7 +242,7 @@ function renderTextChild(
           if (previousState.textContent !== value) {
             previousState.textContent = value;
           }
-          return [insertionPoint, previousState];
+          return previousState;
         } else {
           removeNode(previousState);
         }
@@ -253,10 +256,11 @@ function renderTextChild(
   if (typeof value === 'string') {
     const node = document.createTextNode(value);
     insertNode(insertionPoint, node);
-    return [afterInsertionPoint(node), node];
+    insertionPoint.updateToAfter(node);
+    return node;
   }
 
-  return [insertionPoint, undefined];
+  return undefined;
 }
 
 function renderComputedChild(
@@ -265,7 +269,7 @@ function renderComputedChild(
   invalidated: Reference<any>[],
   state: NodeState | undefined,
   cacheState: CacheState,
-): [InsertionPoint, ComputedNodeState] {
+): ComputedNodeState {
   let previousChildren: Child = {};
   let previousState: NodeState | undefined = undefined;
   if (state && isComputedNodeState(state)) {
@@ -274,20 +278,20 @@ function renderComputedChild(
 
   if (cacheState === CacheState.Empty || anyReferencesOverlap(child.references, invalidated)) {
     const value: Child = child.value();
-    const [nextInsertionPoint, state] = render(insertionPoint, value, invalidated, previousState, cacheState === CacheState.Empty ? CacheState.Empty : CacheState.Invalid);
-    return [nextInsertionPoint, {
+    const state = render(insertionPoint, value, invalidated, previousState, cacheState === CacheState.Empty ? CacheState.Empty : CacheState.Invalid);
+    return {
       previousChildren: value,
       previousState: state,
-    }];
+    };
   }
 
   // Even when the computed value hasn't changed, we still need to walk the old children to check
   // if they changed
-  const [newInsertionPoint, element] = render(insertionPoint, previousChildren, invalidated, previousState, cacheState);
-  return [newInsertionPoint, {
+  const element = render(insertionPoint, previousChildren, invalidated, previousState, cacheState);
+  return {
     previousChildren,
     previousState: element,
-  }];
+  };
 }
 
 function isElementNode(object: unknown): object is ElementNode {
@@ -346,7 +350,7 @@ function writeInvalidAttributes(
 }
 
 function produceElementTag(
-  tag:string,
+  tag: string,
   invalidated: Reference<any>[],
   previousTag: HTMLElement | undefined,
   cacheState: CacheState,
@@ -372,18 +376,18 @@ function renderComponentNode(
   invalidated: Reference<any>[],
   previousState: NodeState | undefined,
   cacheState: CacheState,
-): [InsertionPoint, ComponentNodeState] {
+): ComponentNodeState {
   let previousComponentState: ComponentNodeState | undefined = undefined;
   if (previousState && isComponentNodeState(previousState)) {
     previousComponentState = previousState;
   }
   if (cacheState === CacheState.Empty || previousComponentState === undefined) {
     const element = child.tag(child.props as any);
-    const [nextInsertionPoint, childState] = render(insertionPoint, element, invalidated, undefined, CacheState.Empty);
-    return [nextInsertionPoint, { childState, previousElement: element }]
+    const childState = render(insertionPoint, element, invalidated, undefined, CacheState.Empty);
+    return { childState, previousElement: element }
   } else {
-    const [nextInsertionPoint, childState] = render(insertionPoint, previousComponentState.previousElement, invalidated, previousComponentState.childState, cacheState);
-    return [nextInsertionPoint, { childState, previousElement: previousComponentState.previousElement }];
+    const childState = render(insertionPoint, previousComponentState.previousElement, invalidated, previousComponentState.childState, cacheState);
+    return { childState, previousElement: previousComponentState.previousElement };
   }
 }
 
@@ -393,7 +397,7 @@ function renderElementNode(
   invalidated: Reference<any>[],
   previousState: NodeState | undefined,
   cacheState: CacheState,
-): [InsertionPoint, ElementNodeState] {
+): ElementNodeState {
   let previousChildren: NodeState[] = [];
   let previousTag: HTMLElement | undefined = undefined;
   if (previousState && isElementNodeState(previousState)) {
@@ -406,14 +410,6 @@ function renderElementNode(
   // Update attributes
   writeInvalidAttributes(tag, child.props, invalidated, cacheState);
 
-  // Update children
-  let nextInsertionPoint: InsertionPoint = { kind: 'child', node: tag };
-  const results = child.children.map((childNode, index) => {
-    const [childInsertionPoint, result] = render(nextInsertionPoint, childNode, invalidated, previousChildren[index], cacheState);
-    nextInsertionPoint = childInsertionPoint;
-    return result;
-  });
-
   // Insert the new tag if required
   if (previousTag === tag) {
     moveNode(insertionPoint, tag);
@@ -423,7 +419,15 @@ function renderElementNode(
       removeNode(previousTag);
     }
   }
-  return [afterInsertionPoint(tag), { previousChildren: results, previousTag: tag }];
+
+  // Update children
+  insertionPoint.updateToChildOf(tag);
+  const results = child.children.map((childNode, index) => {
+    return render(insertionPoint, childNode, invalidated, previousChildren[index], cacheState);
+  });
+
+  insertionPoint.updateToAfter(tag);
+  return { previousChildren: results, previousTag: tag };
 }
 
 function renderArrayChild(
@@ -432,9 +436,8 @@ function renderArrayChild(
   invalidated: Reference<any>[],
   previousState: NodeState | undefined,
   cacheState: CacheState,
-): [InsertionPoint, ArrayNodeState] {
+): ArrayNodeState {
   const newChildren: Dictionary<NodeState> = {};
-  let nextInsertionPoint = insertionPoint;
 
   let previousChildren: Dictionary<NodeState> = {};
   if (previousState) {
@@ -460,7 +463,7 @@ function renderArrayChild(
     }
 
     const previousChild = previousChildren[key];
-    ([nextInsertionPoint, newChildren[key]] = render(nextInsertionPoint, child, invalidated, previousChild, cacheState));
+    newChildren[key] = render(insertionPoint, child, invalidated, previousChild, cacheState);
   });
 
   // Remove any children that are not in the current array
@@ -470,10 +473,10 @@ function renderArrayChild(
     }
   });
 
-  return [nextInsertionPoint, { keyedChildren: newChildren }];
+  return { keyedChildren: newChildren };
 }
 
-function render(insertionPoint: InsertionPoint, child: Child, invalidated: Reference<any>[], previousState: NodeState, cacheState: CacheState): [InsertionPoint, NodeState] {
+function render(insertionPoint: InsertionPoint, child: Child, invalidated: Reference<any>[], previousState: NodeState, cacheState: CacheState): NodeState {
   if (isComputedValue(child)) {
     return renderComputedChild(insertionPoint, child, invalidated, previousState, cacheState);
   }
@@ -494,20 +497,11 @@ function render(insertionPoint: InsertionPoint, child: Child, invalidated: Refer
 }
 
 export function renderRootNode(container: HTMLElement, child: ElementNode, invalidated: Reference<any>[], previousChild?: NodeState | undefined): NodeState {
-  const [, state] = render(
-    childInsertionPoint(container),
+  return render(
+    InsertionPoint.createAtChildOf(container),
     child,
     invalidated,
     previousChild,
     previousChild ? CacheState.Valid : CacheState.Empty,
   );
-  return state;
-  // const [, element] = renderElementNode(
-  //   childInsertionPoint(container),
-  //   child,
-  //   invalidated,
-  //   previousChild,
-  //   previousChild ? CacheState.Valid : CacheState.Empty,
-  // );
-  // return element;
 }
