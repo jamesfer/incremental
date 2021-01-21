@@ -24,7 +24,7 @@
     "@types/incremental-intrinsics": "^1.0.0",
     "@types/jest": "^24.0.18",
     "@types/lodash-es": "^4.17.3",
-    "immer": "^4.0.0",
+    "immer": "^8.0.1",
     "jest": "^24.9.0",
     "lodash-es": "^4.17.15",
     "rollup": "^1.26.0",
