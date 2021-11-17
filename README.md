@@ -119,20 +119,31 @@ Tree sizes from about ~30-1500 elements have been tested to see how the performa
 
 The first benchmark renders a full tree on the first frame, and then clears it and renders nothing on the next one, and then a full tree again and so on.
 Since the state is populated and then cleared on every frame, it is mostly a benchmark of the rendering algorithm.
+Lower is better.
 
-# TODO
+<div align="center">
+  <img src="docs/images/first-render-benchmark.png" alt="first render benchmark result">
+</div>
+
+There is not a huge difference between the algorithms, but the incremental render pulls slightly ahead on very large trees.
+
 
 The second benchmark randomly changes a selection of strings displayed in the tree. It benchmarks both the state and rendering systems.
+Lower is better.
 
-# TODO
+<div align="center">
+  <img src="docs/images/update-names-benchmark.png" alt="update node text benchmark">
+</div>
+
+The incremental render that uses the Immer.js library is almost identical to React, however the more custom implementation performs extremely well.
 
 The final benchmark randomly reorders children of the tree. It is a similar type of benchmark to the 
-previous one but it also ensures that the shortcuts in the rendering algorithm to relocate existing nodes is performing as expected.
+previous one, but it also ensures that the shortcuts in the rendering algorithm to relocate existing nodes is performing as expected.
+Lower is better.
 
-# TODO
-
-## Future work
-# TODO
+<div align="center">
+  <img src="docs/images/reorder-children-benchmark.png" alt="reorder children benchmark">
+</div>
 
 ## Is it worth it?
 
